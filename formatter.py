@@ -93,4 +93,4 @@ with tqdm(total=len(items)*12) as pbar:
             for item in items:
                 df_final = getTimeSeriesDataSet(df, shop, item, element, df_final)
                 pbar.update(1)
-        df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';')
+        df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';', index=False)
