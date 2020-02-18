@@ -76,8 +76,7 @@ if __name__== "__main__":
     print('### ...LOADING JSON FILES... ###')
 
     with open('data/item_prices.json') as json_file:
-        data = json.load(json_file)
-        item_price_dict = json.loads(data)
+        item_price_dict = json.load(json_file)
 
     with open('data/unique_months.json') as json_file:
         unique_months_dict = json.load(json_file)
@@ -85,6 +84,8 @@ if __name__== "__main__":
     print('### ...ADDING EMPTY LINES... ###')
 
     raw_data = []
+
+    cols = ['Shop_id', 'Date_Block_Num', 'Item_id', 'Item_Name', 'Item_Category_Name', 'Shop_Name', 'Item_Price', 'Item_Cnt_Day']
 
     with tqdm(total=len(shops_li)) as pbar:
         for shop in shops_li:

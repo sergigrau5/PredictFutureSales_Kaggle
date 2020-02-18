@@ -1,7 +1,8 @@
 import pandas as pd
 import category_encoders as ce
 from pandas import concat
-from tqdm import tqdm
+from tqdm import tqdm, trange
+import json
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -60,7 +61,7 @@ def getTimeSeriesDataSet(df, shop, item, timeseries, df_final):
 
 print('# ...READING FILE... #')
 
-df = pd.read_csv('train_5_empty.csv', sep=';')
+df = pd.read_csv('train_final.csv', sep=';')
 
 '''df['Item_Name'] = df.Item_Name.astype("category").cat.codes
 df['Shop_Name'] = df.Shop_Name.astype("category").cat.codes
@@ -72,25 +73,33 @@ print('# ...DOING NORMALIZATION OF CATEGORICAL FEATURES... #')
 binary_encoder = ce.BinaryEncoder(cols = ['Item_Category_Name'])
 df = binary_encoder.fit_transform(df)
 
-print('# ...DOING NORMALIZATION OF NUMERICAL FEATURES... #')
-
+print('# ... GENERATING MAX AND MIN ITEM PRICE... #')
 max = df['Item_Price'].max()
 min = df['Item_Price'].min()
+
+print('# ...DOING NORMALIZATION OF NUMERICAL FEATURES... #')
 df['Item_Price'] = round((df['Item_Price'] - min) / (max - min), 3)
 print('Max ' + 'Item_Price' + ': ' + str(max) + ' and Min : '+ str(min))
 
 print('# ...GENERATING TIMESERIES ON THE DATASET... #')
 
-shops = df.Shop_id.unique()
-items = df.Item_id.unique()
+shops_li = df.Shop_id.unique()
+items_li = df.Item_id.unique()
 
 #cols = ['Item_Category_Name', 'Item_Price', 'Item_Cnt_Day']
 
-with tqdm(total=len(items)*12) as pbar:
-    for element in range(1,13):
-        df_final = pd.DataFrame([])
-        for shop in shops:
-            for item in items:
-                df_final = getTimeSeriesDataSet(df, shop, item, element, df_final)
-                pbar.update(1)
-        df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';', index=False)
+with open('data/unique_months.json') as json_file:
+    unique_months_dict = json.load(json_file)
+
+#with tqdm(total=len(items_li)*12) as pbar:
+for element in trange(13, desc = 'Progress'):
+    df_final = pd.DataFrame([])
+    with tqdm(total=len(shops_li)*len(items_li)) as pbar:
+        for shop in shops_li:
+            for item in items_li:
+                key = '{};{}'.format(item,shop)
+                if key in unique_months_dict:
+                    df_final = getTimeSeriesDataSet(df, shop, item, element, df_final)
+                    pbar.update(1)
+    print('# ...WRITTING FILE OF SERIE {}... # '.format(element))
+    df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';', index=False)

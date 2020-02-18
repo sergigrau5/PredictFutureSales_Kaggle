@@ -33,18 +33,21 @@ def getMeanPriceProduct(item, shop, df, dict):
 def populateWithEmptyLines(raw_data, item_price_dict, shop_id, items_dict, shops_dict, months_dict, items_list):
     with tqdm(total=len(items_list)) as pbar:
         for item_id in items_list:
-            for month in months_dict['{};{}'.format(item_id, shop_id)]:
-                # df = df.append({'Shop_id': shop_id, 'Date_Block_Num': month, 'Item_id': item_id, 'Item_Name': items_dict[item_id][0],
-                #                 'Item_Category_Name': items_dict[item_id][1], 'Shop_Name': shops_dict[shop_id],
-                #                 'Item_Price': item_price_dict['{};{}'.format(item_id, shop_id)],
-                #                 'Item_Cnt_Day': 0}, ignore_index=True)
-                raw_data.append([shop_id, month, item_id, items_dict[item_id][0], items_dict[item_id][1], shops_dict[shop_id],
-                                item_price_dict['{};{}'.format(item_id, shop_id)], 0])
+            try:
+                for month in months_dict['{};{}'.format(item_id, shop_id)]:
+                    # df = df.append({'Shop_id': shop_id, 'Date_Block_Num': month, 'Item_id': item_id, 'Item_Name': items_dict[item_id][0],
+                    #                 'Item_Category_Name': items_dict[item_id][1], 'Shop_Name': shops_dict[shop_id],
+                    #                 'Item_Price': item_price_dict['{};{}'.format(item_id, shop_id)],
+                    #                 'Item_Cnt_Day': 0}, ignore_index=True)
+                    raw_data.append([shop_id, month, item_id, items_dict[item_id][0], items_dict[item_id][1], shops_dict[shop_id],
+                                    item_price_dict['{};{}'.format(item_id, shop_id)], 0])
+            except:
+                continue
             pbar.update(1)
     return raw_data
 
 def find_missing(lst):
-    return [x for x in range(1, 33) if x not in lst]
+    return [x for x in range(1, 34) if x not in lst]
 
 def getMissingMonthsForProductAndShop(item, shop, df, dict):
     if(not df.empty):
