@@ -4,6 +4,8 @@ from pandas import concat
 from tqdm import tqdm, trange
 import json
 from sklearn.preprocessing import MinMaxScaler
+from keras.preprocessing.sequence import TimeseriesGenerator
+import numpy as np
 
 
 def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
@@ -45,28 +47,27 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
       agg.dropna(inplace=True)
     return agg
 
-def getTimeSeriesDataSet(df, shop, item, timeseries, df_final):
-    sorted_df = df[(df.Shop_id == shop) & (df.Item_id == item)].sort_values('Date_Block_Num')
+def getTimeSeriesDataSet(df, shop, item, timesteps, raw_list):
+    item_df = df[(df.Shop_id == shop) & (df.Item_id == item)]
 
-    del sorted_df['Date_Block_Num']
-    del sorted_df['Shop_Name']
-    del sorted_df['Item_Name']
-    del sorted_df['Shop_id']
-    del sorted_df['Item_id']
+    del item_df['Date_Block_Num']
+    del item_df['Shop_Name']
+    del item_df['Item_Name']
+    del item_df['Shop_id']
+    del item_df['Item_id']
 
-    df_final = df_final.append(series_to_supervised(sorted_df, timeseries))
+    if(len(raw_list) == 0):
+        raw_list = series_to_supervised(item_df, timesteps).values
+    else:
+        raw_list = np.concatenate([raw_list, series_to_supervised(item_df, timesteps).values])
 
-    return df_final
-
+    return raw_list
 
 print('# ...READING FILE... #')
 
-df = pd.read_csv('train_final.csv', sep=';')
+df = pd.read_csv('data/train_final.csv', sep=';').sort_values(by=['Shop_id', 'Item_id', 'Date_Block_Num'])
 
-'''df['Item_Name'] = df.Item_Name.astype("category").cat.codes
-df['Shop_Name'] = df.Shop_Name.astype("category").cat.codes
-df['Item_Category_Name'] = df.Item_Category_Name.astype("category").cat.codes
-print(df.corr())'''
+del df['Date']
 
 print('# ...DOING NORMALIZATION OF CATEGORICAL FEATURES... #')
 
@@ -91,15 +92,20 @@ items_li = df.Item_id.unique()
 with open('data/unique_months.json') as json_file:
     unique_months_dict = json.load(json_file)
 
-#with tqdm(total=len(items_li)*12) as pbar:
-for element in trange(13, desc = 'Progress'):
-    df_final = pd.DataFrame([])
-    with tqdm(total=len(shops_li)*len(items_li)) as pbar:
-        for shop in shops_li:
-            for item in items_li:
-                key = '{};{}'.format(item,shop)
-                if key in unique_months_dict:
-                    df_final = getTimeSeriesDataSet(df, shop, item, element, df_final)
-                    pbar.update(1)
-    print('# ...WRITTING FILE OF SERIE {}... # '.format(element))
-    df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';', index=False)
+raw_data_final = []
+with tqdm(total=12) as pbar_files:
+    for element in range(1, 13):
+        train_final = []
+        with tqdm(total=len(shops_li)) as pbar_shops:
+            for shop in shops_li:
+                with tqdm(total=len(items_li)) as pbar_items:
+                    for item in items_li:
+                        key = '{};{}'.format(item,shop)
+                        if key in unique_months_dict:
+                            train_final = getTimeSeriesDataSet(df, shop, item, element, train_final)
+                        pbar_items.update(1)
+                pbar_shops.update(1)
+        pbar_files.update(1)
+        print('# ...WRITTING FILE OF SERIE {}... # '.format(element))
+        df_final = pd.DateFrame(train_final)
+        df_final.to_csv('train_final_{}_series.csv'.format(element), sep=';', index=False)
